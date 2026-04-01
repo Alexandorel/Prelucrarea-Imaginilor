@@ -22,7 +22,10 @@ Bilioteci necesare:
 
 ## Capturi de Ecran
 
+Imagine originala:
 ![Imagine originală](screenshots/s2.png)
+Imagine CMY:
 ![Imagine CMY](screenshots/s3.png)
+Histograma:
 ![Histogramă](screenshots/s1.png)
 
