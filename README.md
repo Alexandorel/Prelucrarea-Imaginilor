@@ -1,4 +1,8 @@
 
+# Prelucrare Imaginilor
+Repository destinat materiei "Prelucrarea Imaginilor"
+
+
 ## Cerinte
 Limbaj de programare:
 ```http
@@ -21,5 +25,4 @@ Bilioteci necesare:
 ![Imagine originală](screenshots/s2.png)
 ![Imagine CMY](screenshots/s3.png)
 ![Histogramă](screenshots/s1.png)
-
 
