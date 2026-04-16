@@ -143,6 +143,36 @@ def dilate_image(binary_matrix):
     return result
 
 
+def erode_image(binary_matrix):
+    # Eroziunea unei imagini binare (0 = obiect negru, 255 = fundal alb)
+    # Element structural: 3x3 plin (8-conectivitate)
+    # Regula: un pixel ramane 0 doar daca TOTI vecinii sunt 0, altfel devine 255
+    height = len(binary_matrix)
+    width = len(binary_matrix[0])
+    result = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            all_object = True
+            for k in range(-1, 2):
+                for m in range(-1, 2):
+                    ni, nj = i + k, j + m
+                    if 0 <= ni < height and 0 <= nj < width:
+                        if binary_matrix[ni][nj][0] != 0:
+                            all_object = False
+                            break
+                    else:
+                        # Pixelii din afara imaginii sunt considerati fundal
+                        all_object = False
+                        break
+                if not all_object:
+                    break
+            val = 0 if all_object else 255
+            row.append([val, val, val])
+        result.append(row)
+    return result
+
+
 def get_binarized_matrix(matrix, threshold=128):
     # Binarizare: pixelii sub prag devin negri (0), restul albi (255)
     height = len(matrix)
