@@ -80,6 +80,43 @@ def convert_to_ycbcr(matrix):
     return ycbcr_matrix
 
 
+def equalize_histogram(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+
+    # Histograma
+    histogram = [0] * 256
+    for i in range(height):
+        for j in range(width):
+            r, g, b = matrix[i][j]
+            level = (r + g + b) // 3
+            histogram[level] += 1
+
+    # Histograma cumulativa
+    hc = [0] * 256
+    hc[0] = histogram[0]
+    for i in range(1, 256):
+        hc[i] = hc[i - 1] + histogram[i]
+
+    # Formula de egalizare
+    total = width * height
+    denominator = total - hc[0]
+    result = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            r, g, b = matrix[i][j]
+            level = (r + g + b) // 3
+            if denominator > 0:
+                new_level = int((hc[level] - hc[0]) * 255 / denominator)
+            else:
+                new_level = level
+            new_level = max(0, min(255, new_level))
+            row.append([new_level, new_level, new_level])
+        result.append(row)
+    return result
+
+
 def get_binarized_matrix(matrix, threshold=128):
     # Binarizare: pixelii sub prag devin negri (0), restul albi (255)
     height = len(matrix)

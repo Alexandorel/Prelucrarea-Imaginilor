@@ -1,3 +1,4 @@
+import math
 import tkinter as tk
 from tkinter import filedialog
 import numpy as np
@@ -8,15 +9,18 @@ from bmp_reader import read_bmp_24bit
 from conversions import (
     get_grayscale_variations, convert_to_yuv, convert_to_ycbcr,
     convert_to_cmy, convert_to_hsv, get_inverse_matrix,
-    get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel
+    get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
+    equalize_histogram
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
-    get_projections_figure, calculate_covariance_matrix
+    get_projections_figure, calculate_covariance_matrix, label_objects, select_object_by_label,
+    calculate_object_orientation, calculate_elongation_direction
 )
 
 current_photo = None
 original_matrix = None
+current_labels = None
 
 # --- CONFIGURARE FEREASTRA ---
 root = tk.Tk()
@@ -247,9 +251,73 @@ def btn_action_covariance():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_equalize():
+    if original_matrix:
+        draw_matrix(equalize_histogram(original_matrix))
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
+def btn_action_orientation():
+    if original_matrix:
+        angle_rad = calculate_object_orientation(original_matrix)
+        angle_deg = math.degrees(angle_rad)
+        print(f"Orientare obiect: {angle_rad:.4f} rad = {angle_deg:.2f} grade")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 def btn_action_projections():
     if original_matrix:
         show_figure_in_main(get_projections_figure(original_matrix))
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
+def on_label_click(event):
+    global current_labels
+    if current_labels is None or original_matrix is None:
+        return
+    x, y = event.x, event.y
+    height = len(current_labels)
+    width = len(current_labels[0])
+    if 0 <= y < height and 0 <= x < width:
+        label_id = current_labels[y][x]
+        if label_id == 0:
+            show_text_in_main("Ai selectat fundalul (eticheta 0)")
+            return
+        result = select_object_by_label(original_matrix, current_labels, label_id)
+        show_in_new_window(result, f"Obiect cu eticheta {label_id}")
+
+        angle_rad = calculate_elongation_direction(original_matrix, current_labels, label_id)
+        if angle_rad is not None:
+            angle_deg = math.degrees(angle_rad)
+            print(f"Eticheta {label_id} | Directie alungire: {angle_rad:.4f} rad = {angle_deg:.2f} grade")
+            show_text_in_main(f"Eticheta {label_id} | Directie alungire: {angle_rad:.4f} rad = {angle_deg:.2f} grade")
+        else:
+            print(f"Eticheta {label_id} | Nu s-a putut calcula directia de alungire")
+            show_text_in_main(f"Obiect selectat: eticheta {label_id}")
+
+
+def btn_action_etichetare():
+    global current_labels
+    if original_matrix:
+        colored, labels = label_objects(original_matrix)
+        current_labels = labels
+        clear_display()
+        height = len(colored)
+        width = len(colored[0])
+        photo = tk.PhotoImage(width=width, height=height)
+        for y in range(height):
+            for x in range(width):
+                r, g, b = colored[y][x]
+                photo.put(f"#{r:02x}{g:02x}{b:02x}", (x, y))
+        current_photo_ref = photo
+        lbl = tk.Label(display_frame, image=photo, bg='white', cursor='crosshair')
+        lbl.image = photo
+        lbl.pack()
+        lbl.bind("<Button-1>", on_label_click)
+        show_text_in_main("Click pe un obiect din imagine pentru a-l selecta")
     else:
         print("Eroare: Incarca o imagine mai intai!")
 
@@ -292,10 +360,13 @@ dropdown.add_command(label="Invertire + Canale",      command=btn_action_invers_
 dropdown.add_command(label="Binarizare",              command=btn_action_binarizare)
 dropdown.add_command(label="Conversie HSV",           command=btn_action_hsv)
 dropdown.add_command(label="Histograma",              command=btn_action_histogram)
+dropdown.add_command(label="Egalizare Histograma",    command=btn_action_equalize)
 dropdown.add_separator()
 dropdown.add_command(label="Moment Ordin 1",          command=btn_action_moment)
 dropdown.add_command(label="Moment Ordin 2",          command=btn_action_moment2)
 dropdown.add_command(label="Matrice Covarianta",      command=btn_action_covariance)
 dropdown.add_command(label="Proiectii",               command=btn_action_projections)
+dropdown.add_command(label="Orientare obiect",        command=btn_action_orientation)
+dropdown.add_command(label="Etichetare",              command=btn_action_etichetare)
 dropdown.add_separator()
 dropdown.add_command(label="Inchide aplicatia",       command=root.destroy)

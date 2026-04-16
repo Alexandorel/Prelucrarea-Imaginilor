@@ -1,4 +1,5 @@
 import math
+from collections import deque
 
 import matplotlib.pyplot as plt
 
@@ -115,9 +116,162 @@ def get_projections_figure(matrix):
     return fig
 
 
+def calculate_object_orientation(matrix):
+    # Calculeaza orientarea obiectului folosind operatorul Sobel
+    # Returneaza unghiul (in radiani) al gradientului de maxima magnitudine
+    height = len(matrix)
+    width = len(matrix[0])
+
+    def gray(row, col):
+        r, g, b = matrix[row][col]
+        return (r + g + b) // 3
+
+    max_magnitude = 0
+    orientation = 0.0
+
+    for y in range(height):
+        for x in range(width):
+            if x == 0 or y == 0 or x == width - 1 or y == height - 1:
+                continue
+
+            gx = (gray(y - 1, x + 1) + 2 * gray(y, x + 1) + gray(y + 1, x + 1)
+                  - gray(y - 1, x - 1) - 2 * gray(y, x - 1) - gray(y + 1, x - 1))
+
+            gy = (gray(y + 1, x - 1) + 2 * gray(y + 1, x) + gray(y + 1, x + 1)
+                  - gray(y - 1, x - 1) - 2 * gray(y - 1, x) - gray(y - 1, x + 1))
+
+            magnitude = math.sqrt(gx * gx + gy * gy)
+
+            if magnitude > max_magnitude:
+                max_magnitude = magnitude
+                orientation = math.atan2(gy, gx)
+
+    return orientation
+
+
+def _label_to_color(label):
+    # Genereaza o culoare distincta pentru fiecare eticheta folosind unghiul de aur pe HSV
+    if label == 0:
+        return [255, 255, 255]  # fundal alb
+    h = (label * 137) % 360  # distributie uniforma prin unghiul de aur
+    h60 = h / 60.0
+    i = int(h60)
+    f = h60 - i
+    # s=1, v=1 -> culori saturate
+    p, q_val, t = 0, 1 - f, f
+    if i == 0:   r, g, b = 1,     t,     p
+    elif i == 1: r, g, b = q_val, 1,     p
+    elif i == 2: r, g, b = p,     1,     t
+    elif i == 3: r, g, b = p,     q_val, 1
+    elif i == 4: r, g, b = t,     p,     1
+    else:        r, g, b = 1,     p,     q_val
+    return [int(r * 255), int(g * 255), int(b * 255)]
+
+
+def label_objects(matrix):
+    # Etichetare componente conexe prin BFS (8-conectivitate)
+    # Pixelii inchisi (gray < 50) sunt considerati obiecte
+    # Returneaza (colored_matrix, labels_matrix)
+    height = len(matrix)
+    width = len(matrix[0])
+
+    # Binarizare cu prag 50: pixeli intunecati -> 0 (obiect), restul -> 255 (fundal)
+    binary = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            r, g, b = matrix[i][j]
+            gray = (r + g + b) // 3
+            row.append(0 if gray < 50 else 255)
+        binary.append(row)
+
+    label = 0
+    labels = [[0] * width for _ in range(height)]
+
+    for i in range(height):
+        for j in range(width):
+            if binary[i][j] == 0 and labels[i][j] == 0:
+                label += 1
+                labels[i][j] = label
+                queue = deque()
+                queue.append((i, j))
+                while queue:
+                    q0, q1 = queue.popleft()
+                    for k in range(-1, 2):
+                        for m in range(-1, 2):
+                            ni, nj = q0 + k, q1 + m
+                            if 0 <= ni < height and 0 <= nj < width:
+                                if binary[ni][nj] == 0 and labels[ni][nj] == 0:
+                                    labels[ni][nj] = label
+                                    queue.append((ni, nj))
+
+    # Construieste imaginea colorata: fiecare eticheta primeste o culoare distincta
+    dst = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            row.append(_label_to_color(labels[i][j]))
+        dst.append(row)
+
+    return dst, labels
+
+
+def calculate_elongation_direction(matrix, labels, label_id):
+    # Calculeaza directia de alungire a obiectului cu eticheta label_id
+    # folosind operatorul Sobel aplicat doar pe pixelii obiectului
+    # Returneaza unghiul dominant (medie ponderata cu magnitudinea gradientului)
+    height = len(matrix)
+    width = len(matrix[0])
+
+    def gray(row, col):
+        r, g, b = matrix[row][col]
+        return (r + g + b) // 3
+
+    sum_gx = 0.0
+    sum_gy = 0.0
+    total_magnitude = 0.0
+
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            if labels[y][x] != label_id:
+                continue
+
+            gx = (gray(y-1, x+1) + 2*gray(y, x+1) + gray(y+1, x+1)
+                  - gray(y-1, x-1) - 2*gray(y, x-1) - gray(y+1, x-1))
+
+            gy = (gray(y+1, x-1) + 2*gray(y+1, x) + gray(y+1, x+1)
+                  - gray(y-1, x-1) - 2*gray(y-1, x) - gray(y-1, x+1))
+
+            magnitude = math.sqrt(gx * gx + gy * gy)
+            sum_gx += gx * magnitude
+            sum_gy += gy * magnitude
+            total_magnitude += magnitude
+
+    if total_magnitude == 0:
+        return None
+
+    return math.atan2(sum_gy, sum_gx)
+
+
+def select_object_by_label(matrix, labels, label_id):
+    # Returneaza imaginea originala cu obiectul selectat evidentiat
+    # Pixelii cu eticheta label_id raman in culoarea originala, restul devin albi
+    height = len(matrix)
+    width = len(matrix[0])
+    dst = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            if labels[i][j] == label_id:
+                row.append(list(matrix[i][j]))
+            else:
+                row.append([255, 255, 255])
+        dst.append(row)
+    return dst
+
+
 def calculate_covariance_matrix(matrix):
-    # Calculeaza matricea de covarianta pe baza momentelor centrale de ordinul 2
-    # Aplicata pe imaginea binarizata pentru a izola obiectul principal
+    # Calculeaza matricea de covarianta aplicata pe imaginea binarizata pentru a izola obiectul principal
     binary = get_binarized_matrix(matrix, threshold=128)
     height = len(matrix)
     width = len(matrix[0])
