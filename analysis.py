@@ -7,8 +7,6 @@ from conversions import get_binarized_matrix
 
 
 def calculate_histogram(matrix):
-    # Calculeaza histograma imaginii in tonuri de gri
-    # Returneaza o lista de 256 de valori: numarul de pixeli pentru fiecare intensitate
     height = len(matrix)
     width = len(matrix[0])
     histogram = [0] * 256
@@ -21,7 +19,7 @@ def calculate_histogram(matrix):
 
 
 def get_histogram_figure(matrix):
-    # Construieste figura matplotlib cu histograma imaginii in tonuri de gri
+    #Constructia figurii matplotlib cu histograma imaginii in tonuri de gri
     histogram = calculate_histogram(matrix)
     fig, ax = plt.subplots()
     ax.bar(range(256), histogram, color='gray', width=1)
@@ -34,8 +32,7 @@ def get_histogram_figure(matrix):
 
 
 def calculate_moment_order1(matrix):
-    # Calculeaza momentele geometrice de ordinul 1: M00, M10, M01
-    # si coordonatele centroidului (cx, cy)
+    # Calculul momentelor geometrice de ordinul 1: M00, M10, M01 si coordonatele centroidului (cx, cy)
     height = len(matrix)
     width = len(matrix[0])
     M00 = M10 = M01 = 0
@@ -53,8 +50,7 @@ def calculate_moment_order1(matrix):
 
 
 def calculate_moment_order2(matrix):
-    # Calculeaza momentele centrale de ordinul 2 pe imaginea binarizata
-    # si unghiul de rotatie al obiectului principal
+    # Calculul momentelor centrale de ordinul 2: mu20, mu02, mu11 si unghiul de rotatie al obiectului principal
     height = len(matrix)
     width = len(matrix[0])
     M00 = M10 = M01 = M20 = M02 = M11 = 0
@@ -62,7 +58,7 @@ def calculate_moment_order2(matrix):
         for j in range(width):
             r, g, b = matrix[i][j]
             raw = (r + g + b) // 3
-            # Binarizare locala: pixelii intunecati devin albi (obiect)
+            # Binarizare locala: pixeli intunecati => albi
             gray = 255 if raw < 128 else 0
             M00 += gray
             M10 += i * gray
@@ -117,7 +113,7 @@ def get_projections_figure(matrix):
 
 
 def calculate_object_orientation(matrix):
-    # Calculeaza orientarea obiectului folosind operatorul Sobel
+    # Calcularea orientarii obiectului folosind operatorul Sobel
     # Returneaza unghiul (in radiani) al gradientului de maxima magnitudine
     height = len(matrix)
     width = len(matrix[0])

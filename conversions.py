@@ -117,6 +117,32 @@ def equalize_histogram(matrix):
     return result
 
 
+def dilate_image(binary_matrix):
+    # Dilatarea unei imagini binare (0 = obiect negru, 255 = fundal alb)
+    # Element structural: 3x3 plin (8-conectivitate)
+    # Regula: un pixel devine 0 daca CEL PUTIN UN vecin (inclusiv el) este 0
+    height = len(binary_matrix)
+    width = len(binary_matrix[0])
+    result = []
+    for i in range(height):
+        row = []
+        for j in range(width):
+            is_object = False
+            for k in range(-1, 2):
+                for m in range(-1, 2):
+                    ni, nj = i + k, j + m
+                    if 0 <= ni < height and 0 <= nj < width:
+                        if binary_matrix[ni][nj][0] == 0:
+                            is_object = True
+                            break
+                if is_object:
+                    break
+            val = 0 if is_object else 255
+            row.append([val, val, val])
+        result.append(row)
+    return result
+
+
 def get_binarized_matrix(matrix, threshold=128):
     # Binarizare: pixelii sub prag devin negri (0), restul albi (255)
     height = len(matrix)

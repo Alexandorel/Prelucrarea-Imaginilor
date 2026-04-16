@@ -10,7 +10,7 @@ from conversions import (
     get_grayscale_variations, convert_to_yuv, convert_to_ycbcr,
     convert_to_cmy, convert_to_hsv, get_inverse_matrix,
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
-    equalize_histogram
+    equalize_histogram, dilate_image
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
@@ -21,6 +21,8 @@ from analysis import (
 current_photo = None
 original_matrix = None
 current_labels = None
+dilate_frame = None
+dilate_entry = None
 
 # --- CONFIGURARE FEREASTRA ---
 root = tk.Tk()
@@ -258,6 +260,43 @@ def btn_action_equalize():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def apply_dilation_n_times():
+    if not original_matrix:
+        print("Eroare: Incarca o imagine mai intai!")
+        return
+    try:
+        n = int(dilate_entry.get())
+    except ValueError:
+        print("Introdu un numar valid (intreg)")
+        return
+    if n < 1:
+        print("Numarul de iteratii trebuie sa fie >= 1")
+        return
+    result = get_binarized_matrix(original_matrix, threshold=128)
+    for _ in range(n):
+        result = dilate_image(result)
+    draw_matrix(result)
+    show_text_in_main(f"Dilatare aplicata de {n} ori")
+
+
+def btn_action_dilate():
+    global dilate_frame, dilate_entry
+    if not original_matrix:
+        print("Eroare: Incarca o imagine mai intai!")
+        return
+    if dilate_frame is None:
+        dilate_frame = tk.Frame(toolbar, bg='#f0f0f0')
+        dilate_frame.pack(side="left", padx=4, pady=4)
+        tk.Label(dilate_frame, text="Iteratii:", bg='#f0f0f0',
+                 font=("Arial", 10)).pack(side="left", padx=(4, 2))
+        dilate_entry = tk.Entry(dilate_frame, width=4, font=("Arial", 10))
+        dilate_entry.insert(0, "1")
+        dilate_entry.pack(side="left", padx=2)
+        tk.Button(dilate_frame, text="Aplica Dilatare",
+                  command=apply_dilation_n_times, **btn_style).pack(side="left", padx=2)
+    apply_dilation_n_times()
+
+
 def btn_action_orientation():
     if original_matrix:
         angle_rad = calculate_object_orientation(original_matrix)
@@ -361,6 +400,7 @@ dropdown.add_command(label="Binarizare",              command=btn_action_binariz
 dropdown.add_command(label="Conversie HSV",           command=btn_action_hsv)
 dropdown.add_command(label="Histograma",              command=btn_action_histogram)
 dropdown.add_command(label="Egalizare Histograma",    command=btn_action_equalize)
+dropdown.add_command(label="Dilatare",                command=btn_action_dilate)
 dropdown.add_separator()
 dropdown.add_command(label="Moment Ordin 1",          command=btn_action_moment)
 dropdown.add_command(label="Moment Ordin 2",          command=btn_action_moment2)
