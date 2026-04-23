@@ -1,3 +1,5 @@
+import numpy as np
+
 def convert_to_grayscale(matrix):
     # Conversie la tonuri de gri prin media aritmetica a canalelor R, G, B
     height = len(matrix)
@@ -248,3 +250,202 @@ def get_green_channel(matrix):
 def get_blue_channel(matrix):
     # Pastreaza doar canalul albastru, R si G devin 0
     return [[[0, 0, pixel[2]] for pixel in row] for row in matrix]
+
+def Fourier_transform(matrix):
+    # 1. Convertire imagine in tablou bidimensional în scala de gri
+    height = len(matrix)
+    width = len(matrix[0])
+    gray_pixels = np.zeros((height, width), dtype=float)
+    
+    for y in range(height):
+        for x in range(width):
+            r, g, b = matrix[y][x]
+            gray_pixels[y, x] = 0.299 * r + 0.587 * g + 0.114 * b
+            
+    # 2. Aplicarea transformatei fourier discrete
+    # În Python numerele complexe sunt native (ex. 1 + 2j).
+    dft = np.fft.fft2(gray_pixels)
+    
+    # Centrarea spectrului de frecvente
+    dft_shift = np.fft.fftshift(dft)
+    
+    # 3. Salvarea spectrului de magnitudine într-o imagine
+    magnitude = np.abs(dft_shift)
+    # Aplicărea transformarii logaritmice pentru a face diferentele vizibile ochiului uman
+    magnitude_log = np.log(1 + magnitude)
+    
+    # Normalizare pe 8 biți (0-255)
+    mag_min = magnitude_log.min()
+    mag_max = magnitude_log.max()
+    normalized = 255 * (magnitude_log - mag_min) / (mag_max - mag_min) if mag_max != mag_min else magnitude_log
+    
+    # Conversie într-o matrice RGB standard pentru a fi afișată pe UI
+    result = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            val = int(normalized[y, x])
+            row.append([val, val, val])
+        result.append(row)
+        
+    return result
+
+
+def mean_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # Initializam matricea destinatie facand o copie a originalului.
+    # Acest lucru pastreaza marginile de 1 pixel intacte (nondistorsionate).
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append(list(matrix[y][x]))
+        dst.append(row)
+        
+    v = [
+        [1.0/9.0, 1.0/9.0, 1.0/9.0],
+        [1.0/9.0, 1.0/9.0, 1.0/9.0],
+        [1.0/9.0, 1.0/9.0, 1.0/9.0]
+    ]
+    
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            sum_r = sum_g = sum_b = 0.0
+            for k in range(-1, 2):
+                for l in range(-1, 2):
+                    r, g, b = matrix[y + k][x + l]
+                    sum_r += v[k + 1][l + 1] * r
+                    sum_g += v[k + 1][l + 1] * g
+                    sum_b += v[k + 1][l + 1] * b
+                    
+            dst[y][x] = [int(sum_r), int(sum_g), int(sum_b)]
+            
+    return dst
+
+
+def median_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # Initizare matrice -> copie
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append(list(matrix[y][x]))
+        dst.append(row)
+        
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            r_vals, g_vals, b_vals = [], [], []
+            for m in range(-1, 2):
+                for n in range(-1, 2):
+                    r, g, b = matrix[y + m][x + n]
+                    r_vals.append(r)
+                    g_vals.append(g)
+                    b_vals.append(b)
+            
+            # Ordonarea crescatoare
+            r_vals.sort()
+            g_vals.sort()
+            b_vals.sort()
+            
+            dst[y][x] = [r_vals[4], g_vals[4], b_vals[4]]
+            
+    return dst
+
+# filtru de accentuare
+def sharpen_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # Initializare matrice destinatie
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append(list(matrix[y][x]))
+        dst.append(row)
+        
+    v = [
+        [0.0, -0.25, 0.0],
+        [-0.25, 1.0, -0.25],
+        [0.0, -0.25, 0.0]
+    ]
+    
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            sum_r = sum_g = sum_b = 0.0
+            for k in range(-1, 2):
+                for l in range(-1, 2):
+                    r, g, b = matrix[y + k][x + l]
+                    sum_r += v[k + 1][l + 1] * r
+                    sum_g += v[k + 1][l + 1] * g
+                    sum_b += v[k + 1][l + 1] * b
+                    
+            orig_r, orig_g, orig_b = matrix[y][x]
+            
+            # Aplicare accentuare cu factor de 0.6
+            new_r = int(max(0, min(255, orig_r + 0.6 * sum_r)))
+            new_g = int(max(0, min(255, orig_g + 0.6 * sum_g)))
+            new_b = int(max(0, min(255, orig_b + 0.6 * sum_b)))
+            
+            dst[y][x] = [new_r, new_g, new_b]
+            
+    return dst
+
+
+def minimum_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # Initializare matrice -> copie
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append(list(matrix[y][x]))
+        dst.append(row)
+        
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            r_vals, g_vals, b_vals = [], [], []
+            for m in range(-1, 2):
+                for n in range(-1, 2):
+                    r, g, b = matrix[y + m][x + n]
+                    r_vals.append(r)
+                    g_vals.append(g)
+                    b_vals.append(b)
+            
+            dst[y][x] = [min(r_vals), min(g_vals), min(b_vals)]
+            
+    return dst
+
+
+def maximum_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # initializare matrice -> copie
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append(list(matrix[y][x]))
+        dst.append(row)
+        
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            r_vals, g_vals, b_vals = [], [], []
+            for m in range(-1, 2):
+                for n in range(-1, 2):
+                    r, g, b = matrix[y + m][x + n]
+                    r_vals.append(r)
+                    g_vals.append(g)
+                    b_vals.append(b)
+            
+            dst[y][x] = [max(r_vals), max(g_vals), max(b_vals)]
+            
+    return dst

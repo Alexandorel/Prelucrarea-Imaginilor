@@ -10,7 +10,8 @@ from conversions import (
     get_grayscale_variations, convert_to_yuv, convert_to_ycbcr,
     convert_to_cmy, convert_to_hsv, get_inverse_matrix,
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
-    equalize_histogram, dilate_image, erode_image
+    equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
+    median_filter, minimum_filter, maximum_filter, sharpen_filter
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
@@ -400,6 +401,50 @@ def btn_action_etichetare():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_fourier():
+    if original_matrix:
+        result = Fourier_transform(original_matrix)
+        show_in_new_window(result, "Transformata Fourier (Spectru Magnitudine)")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
+def btn_action_mean_filter():
+    if original_matrix:
+        result = mean_filter(original_matrix)
+        show_in_new_window(result, "Filtru mediere (Blur)")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+def btn_action_median_filter():
+    if original_matrix:
+        result = median_filter(original_matrix)
+        show_in_new_window(result, "Filtru median")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+def btn_action_minimum_filter():
+    if original_matrix:
+        result = minimum_filter(original_matrix)
+        show_in_new_window(result, "Filtru de minim")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+def btn_action_maximum_filter():
+    if original_matrix:
+        result = maximum_filter(original_matrix)
+        show_in_new_window(result, "Filtru de maxim")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+def btn_action_sharpen_filter():
+    if original_matrix:
+        result = sharpen_filter(original_matrix)
+        show_in_new_window(result, "Filtru accentuare (Sharpen)")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 # --- BUTOANE TOOLBAR ---
 
 btn_style = {
@@ -441,6 +486,7 @@ dropdown.add_command(label="Histograma",              command=btn_action_histogr
 dropdown.add_command(label="Egalizare Histograma",    command=btn_action_equalize)
 dropdown.add_command(label="Dilatare",                command=btn_action_dilate)
 dropdown.add_command(label="Eroziune",                command=btn_action_erode)
+dropdown.add_command(label="Filtru mediere (Blur)",   command=btn_action_mean_filter)
 dropdown.add_separator()
 dropdown.add_command(label="Moment Ordin 1",          command=btn_action_moment)
 dropdown.add_command(label="Moment Ordin 2",          command=btn_action_moment2)
@@ -448,5 +494,11 @@ dropdown.add_command(label="Matrice Covarianta",      command=btn_action_covaria
 dropdown.add_command(label="Proiectii",               command=btn_action_projections)
 dropdown.add_command(label="Orientare obiect",        command=btn_action_orientation)
 dropdown.add_command(label="Etichetare",              command=btn_action_etichetare)
+dropdown.add_command(label="Transformata Fourier",    command=btn_action_fourier)
+dropdown.add_command(label="Filtru mediere",   command=btn_action_mean_filter)
+dropdown.add_command(label="Filtru median",           command=btn_action_median_filter)
+dropdown.add_command(label="Filtru minim",            command=btn_action_minimum_filter)
+dropdown.add_command(label="Filtru maxim",            command=btn_action_maximum_filter)
+dropdown.add_command(label="Filtru accentuare",       command=btn_action_sharpen_filter)
 dropdown.add_separator()
 dropdown.add_command(label="Inchide aplicatia",       command=root.destroy)
