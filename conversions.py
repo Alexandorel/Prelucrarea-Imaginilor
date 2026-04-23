@@ -449,3 +449,68 @@ def maximum_filter(matrix):
             dst[y][x] = [max(r_vals), max(g_vals), max(b_vals)]
             
     return dst
+
+
+def get_nearest_color(r, g, b, palette):
+    # Afla culoarea cea mai apropiata din paleta folosind distanta euclidiana (la patrat)
+    nearest_color = palette[0]
+    min_dist = float('inf')
+    for pr, pg, pb in palette:
+        dist = (r - pr)**2 + (g - pg)**2 + (b - pb)**2
+        if dist < min_dist:
+            min_dist = dist
+            nearest_color = (pr, pg, pb)
+    return nearest_color
+
+
+def floyd_steinberg_dithering(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    
+    # Definim o paleta standard (ex: 8 culori de baza)
+    palette = [
+        (0, 0, 0),       # Negru
+        (255, 0, 0),     # Rosu
+        (0, 255, 0),     # Verde
+        (0, 0, 255),     # Albastru
+        (0, 255, 255),   # Cyan
+        (255, 0, 255),   # Magenta
+        (255, 255, 0),   # Galben
+        (255, 255, 255)  # Alb
+    ]
+
+    # Cream o copie de lucru cu valori float pentru a nu pierde din precizie la rotunjirea erorii
+    work = [[[float(r), float(g), float(b)] for r, g, b in row] for row in matrix]
+    
+    dst = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+
+    for y in range(height):
+        for x in range(width):
+            old_r, old_g, old_b = work[y][x]
+            
+            # Gasim culoarea cea mai apropiata din paleta
+            new_r, new_g, new_b = get_nearest_color(old_r, old_g, old_b, palette)
+            dst[y][x] = [new_r, new_g, new_b]
+            
+            # Calculam eroarea per canal
+            err_r, err_g, err_b = old_r - new_r, old_g - new_g, old_b - new_b
+            
+            # Propagam eroarea la vecini conform matricei Floyd-Steinberg
+            if x + 1 < width:
+                work[y][x + 1][0] += err_r * 7 / 16
+                work[y][x + 1][1] += err_g * 7 / 16
+                work[y][x + 1][2] += err_b * 7 / 16
+            if x - 1 >= 0 and y + 1 < height:
+                work[y + 1][x - 1][0] += err_r * 3 / 16
+                work[y + 1][x - 1][1] += err_g * 3 / 16
+                work[y + 1][x - 1][2] += err_b * 3 / 16
+            if y + 1 < height:
+                work[y + 1][x][0] += err_r * 5 / 16
+                work[y + 1][x][1] += err_g * 5 / 16
+                work[y + 1][x][2] += err_b * 5 / 16
+            if x + 1 < width and y + 1 < height:
+                work[y + 1][x + 1][0] += err_r * 1 / 16
+                work[y + 1][x + 1][1] += err_g * 1 / 16
+                work[y + 1][x + 1][2] += err_b * 1 / 16
+                
+    return dst

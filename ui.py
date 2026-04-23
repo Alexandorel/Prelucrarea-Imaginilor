@@ -11,7 +11,7 @@ from conversions import (
     convert_to_cmy, convert_to_hsv, get_inverse_matrix,
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
     equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
-    median_filter, minimum_filter, maximum_filter, sharpen_filter
+    median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
@@ -444,6 +444,13 @@ def btn_action_sharpen_filter():
     else:
         print("Eroare: Incarca o imagine mai intai!")
 
+def btn_action_floyd_steinberg():
+    if original_matrix:
+        result = floyd_steinberg_dithering(original_matrix)
+        show_in_new_window(result, "Floyd-Steinberg Dithering")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
 
 # --- BUTOANE TOOLBAR ---
 
@@ -500,5 +507,6 @@ dropdown.add_command(label="Filtru median",           command=btn_action_median_
 dropdown.add_command(label="Filtru minim",            command=btn_action_minimum_filter)
 dropdown.add_command(label="Filtru maxim",            command=btn_action_maximum_filter)
 dropdown.add_command(label="Filtru accentuare",       command=btn_action_sharpen_filter)
+dropdown.add_command(label="Floyd-Steinberg",         command=btn_action_floyd_steinberg)
 dropdown.add_separator()
 dropdown.add_command(label="Inchide aplicatia",       command=root.destroy)
