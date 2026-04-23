@@ -291,6 +291,69 @@ def Fourier_transform(matrix):
     return result
 
 
+def inverse_fourier_transform(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    gray_pixels = np.zeros((height, width), dtype=float)
+    r_pixels = np.zeros((height, width), dtype=float)
+    g_pixels = np.zeros((height, width), dtype=float)
+    b_pixels = np.zeros((height, width), dtype=float)
+    
+    for y in range(height):
+        for x in range(width):
+            r, g, b = matrix[y][x]
+            gray_pixels[y, x] = 0.299 * r + 0.587 * g + 0.114 * b
+            r_pixels[y, x] = r
+            g_pixels[y, x] = g
+            b_pixels[y, x] = b
+            
+    # 1. Trecem imaginea gri in domeniul frecventelor pentru a vizualiza spectrul
+    dft = np.fft.fft2(gray_pixels)
+    
+    # --- Generare imagine spectru (ca in Fourier_transform) ---
+    dft_shift = np.fft.fftshift(dft)
+    magnitude = np.abs(dft_shift)
+    magnitude_log = np.log(1 + magnitude)
+    mag_min = magnitude_log.min()
+    mag_max = magnitude_log.max()
+    normalized_spectrum = 255 * (magnitude_log - mag_min) / (mag_max - mag_min) if mag_max != mag_min else magnitude_log
+    
+    spectrum_image = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            val = int(normalized_spectrum[y, x])
+            row.append([val, val, val])
+        spectrum_image.append(row)
+
+    # 2. Reconstruim imaginea COLOR folosind Transformata Inversa pe fiecare canal
+    dft_r = np.fft.fft2(r_pixels)
+    dft_g = np.fft.fft2(g_pixels)
+    dft_b = np.fft.fft2(b_pixels)
+    
+    rec_r = np.abs(np.fft.ifft2(dft_r))
+    rec_g = np.abs(np.fft.ifft2(dft_g))
+    rec_b = np.abs(np.fft.ifft2(dft_b))
+    
+    def normalize(channel):
+        c_min = channel.min()
+        c_max = channel.max()
+        return 255 * (channel - c_min) / (c_max - c_min) if c_max != c_min else channel
+        
+    norm_r = normalize(rec_r)
+    norm_g = normalize(rec_g)
+    norm_b = normalize(rec_b)
+    
+    reconstructed_image = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append([int(norm_r[y, x]), int(norm_g[y, x]), int(norm_b[y, x])])
+        reconstructed_image.append(row)
+        
+    return spectrum_image, reconstructed_image
+
+
 def mean_filter(matrix):
     height = len(matrix)
     width = len(matrix[0])
@@ -452,7 +515,7 @@ def maximum_filter(matrix):
 
 
 def get_nearest_color(r, g, b, palette):
-    # Afla culoarea cea mai apropiata din paleta folosind distanta euclidiana (la patrat)
+    # Afla culoarea cea mai apropiata din paleta folosind distanta euclidiana
     nearest_color = palette[0]
     min_dist = float('inf')
     for pr, pg, pb in palette:

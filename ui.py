@@ -11,7 +11,7 @@ from conversions import (
     convert_to_cmy, convert_to_hsv, get_inverse_matrix,
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
     equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
-    median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering
+    median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering, inverse_fourier_transform
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
@@ -452,6 +452,15 @@ def btn_action_floyd_steinberg():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_inverse_fourier():
+    if original_matrix:
+        spectrum_img, reconstructed_img = inverse_fourier_transform(original_matrix)
+        show_in_new_window(spectrum_img, "Spectru Frecvente (Unde)")
+        show_in_new_window(reconstructed_img, "Reconstructie (FFT Invers)")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 # --- BUTOANE TOOLBAR ---
 
 btn_style = {
@@ -502,6 +511,7 @@ dropdown.add_command(label="Proiectii",               command=btn_action_project
 dropdown.add_command(label="Orientare obiect",        command=btn_action_orientation)
 dropdown.add_command(label="Etichetare",              command=btn_action_etichetare)
 dropdown.add_command(label="Transformata Fourier",    command=btn_action_fourier)
+dropdown.add_command(label="Transformata Fourier Inversa", command=btn_action_inverse_fourier)
 dropdown.add_command(label="Filtru mediere",   command=btn_action_mean_filter)
 dropdown.add_command(label="Filtru median",           command=btn_action_median_filter)
 dropdown.add_command(label="Filtru minim",            command=btn_action_minimum_filter)
