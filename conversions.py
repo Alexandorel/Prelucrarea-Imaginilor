@@ -576,4 +576,36 @@ def floyd_steinberg_dithering(matrix):
                 work[y + 1][x + 1][1] += err_g * 1 / 16
                 work[y + 1][x + 1][2] += err_b * 1 / 16
                 
+def laplacian_filter(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            dst_row_pixel = list(matrix[y][x])
+            row.append(dst_row_pixel)
+        dst.append(row)
+
+    v = [
+        [-1, -1, -1],
+        [-1,  8, -1],
+        [-1, -1, -1]
+    ]
+
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            sum_val = 0
+            for m in range(-1, 2):
+                for n in range(-1, 2):
+                    r, g, b = matrix[y + n][x + m]
+                    gray = (r + g + b) // 3
+                    sum_val += v[m + 1][n + 1] * gray
+
+            sum_val = max(0, min(255, sum_val))
+            dst[y][x] = [sum_val, sum_val, sum_val]
+
+    return dst
+
     return dst
