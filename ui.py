@@ -12,12 +12,12 @@ from conversions import (
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
     equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
     median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering, inverse_fourier_transform,
-    laplacian_filter
+    laplacian_filter, remove_gaussian_noise
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
     get_projections_figure, calculate_covariance_matrix, label_objects, select_object_by_label,
-    calculate_object_orientation, calculate_elongation_direction
+    calculate_object_orientation, calculate_elongation_direction, calculate_snr, calculate_snr_between
 )
 
 current_photo = None
@@ -468,6 +468,12 @@ def btn_action_laplacian_filter():
     else:
         print("Eroare: Incarca o imagine mai intai!")
 
+def btn_action_remove_gaussian_noise():
+    if original_matrix:
+        result = remove_gaussian_noise(original_matrix)
+        show_in_new_window(result, "Eliminare zgomot gaussian")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
 
 
 # --- BUTOANE TOOLBAR ---
@@ -496,38 +502,60 @@ tk.Frame(toolbar, width=1, bg="#cccccc").pack(side="left", fill="y", padx=4, pad
 menu_btn = tk.Menubutton(toolbar, text="Menu \u25be", **btn_style)
 menu_btn.pack(side="left", padx=2, pady=4)
 
+filters_btn = tk.Menubutton(toolbar, text="Filtre \u25be", **btn_style)
+menu_btn.pack(side="left", padx=2, pady=4)
+
 dropdown = tk.Menu(menu_btn, tearoff=0)
 menu_btn.config(menu=dropdown)
 
-dropdown.add_command(label="Cele 3 Variante Gray",   command=btn_action_grayscale)
-dropdown.add_command(label="Conversie CMY",           command=btn_action_cmy)
-dropdown.add_command(label="Conversie YUV",           command=btn_action_yuv)
-dropdown.add_command(label="Conversie YCbCr",         command=btn_action_ycbcr)
-dropdown.add_separator()
-dropdown.add_command(label="Invertire + Canale",      command=btn_action_invers_si_canale)
-dropdown.add_command(label="Binarizare",              command=btn_action_binarizare)
-dropdown.add_command(label="Conversie HSV",           command=btn_action_hsv)
-dropdown.add_command(label="Histograma",              command=btn_action_histogram)
-dropdown.add_command(label="Egalizare Histograma",    command=btn_action_equalize)
-dropdown.add_command(label="Dilatare",                command=btn_action_dilate)
-dropdown.add_command(label="Eroziune",                command=btn_action_erode)
-dropdown.add_command(label="Filtru mediere (Blur)",   command=btn_action_mean_filter)
-dropdown.add_separator()
-dropdown.add_command(label="Moment Ordin 1",          command=btn_action_moment)
-dropdown.add_command(label="Moment Ordin 2",          command=btn_action_moment2)
-dropdown.add_command(label="Matrice Covarianta",      command=btn_action_covariance)
-dropdown.add_command(label="Proiectii",               command=btn_action_projections)
-dropdown.add_command(label="Orientare obiect",        command=btn_action_orientation)
-dropdown.add_command(label="Etichetare",              command=btn_action_etichetare)
-dropdown.add_command(label="Transformata Fourier",    command=btn_action_fourier)
-dropdown.add_command(label="Transformata Fourier Inversa", command=btn_action_inverse_fourier)
-dropdown.add_command(label="Filtru mediere",   command=btn_action_mean_filter)
-dropdown.add_command(label="Filtru median",           command=btn_action_median_filter)
-dropdown.add_command(label="Filtru minim",            command=btn_action_minimum_filter)
-dropdown.add_command(label="Filtru maxim",            command=btn_action_maximum_filter)
-dropdown.add_command(label="Filtru accentuare",       command=btn_action_sharpen_filter)
-dropdown.add_command(label="Floyd-Steinberg",         command=btn_action_floyd_steinberg)
-dropdown.add_command(label="Filtru Laplacian",        command=btn_action_laplacian_filter)
+# --- Conversii de culoare ---
+conversii_menu = tk.Menu(dropdown, tearoff=0)
+conversii_menu.add_command(label="Cele 3 Variante Gray",  command=btn_action_grayscale)
+conversii_menu.add_command(label="Conversie CMY",         command=btn_action_cmy)
+conversii_menu.add_command(label="Conversie YUV",         command=btn_action_yuv)
+conversii_menu.add_command(label="Conversie YCbCr",       command=btn_action_ycbcr)
+conversii_menu.add_command(label="Conversie HSV",         command=btn_action_hsv)
+conversii_menu.add_command(label="Invertire + Canale",    command=btn_action_invers_si_canale)
+dropdown.add_cascade(label="Conversii", menu=conversii_menu)
+
+# --- Operatii de baza ---
+baza_menu = tk.Menu(dropdown, tearoff=0)
+baza_menu.add_command(label="Binarizare",                 command=btn_action_binarizare)
+baza_menu.add_command(label="Histograma",                 command=btn_action_histogram)
+baza_menu.add_command(label="Egalizare Histograma",       command=btn_action_equalize)
+baza_menu.add_command(label="Dilatare",                   command=btn_action_dilate)
+baza_menu.add_command(label="Eroziune",                   command=btn_action_erode)
+dropdown.add_cascade(label="Operatii de baza", menu=baza_menu)
+
+# --- Filtre ---
+filtre_menu = tk.Menu(dropdown, tearoff=0)
+filtre_menu.add_command(label="Filtru mediere (Blur)",    command=btn_action_mean_filter)
+filtre_menu.add_command(label="Filtru median",            command=btn_action_median_filter)
+filtre_menu.add_command(label="Filtru minim",             command=btn_action_minimum_filter)
+filtre_menu.add_command(label="Filtru maxim",             command=btn_action_maximum_filter)
+filtre_menu.add_command(label="Filtru accentuare",        command=btn_action_sharpen_filter)
+filtre_menu.add_command(label="Filtru Laplacian",         command=btn_action_laplacian_filter)
+filtre_menu.add_command(label="Floyd-Steinberg",          command=btn_action_floyd_steinberg)
+filtre_menu.add_command(label="Eliminare zgomot gaussian", command=btn_action_remove_gaussian_noise)
+dropdown.add_cascade(label="Filtre", menu=filtre_menu)
+
+# --- Analiza ---
+analiza_menu = tk.Menu(dropdown, tearoff=0)
+analiza_menu.add_command(label="Moment Ordin 1",          command=btn_action_moment)
+analiza_menu.add_command(label="Moment Ordin 2",          command=btn_action_moment2)
+analiza_menu.add_command(label="Matrice Covarianta",      command=btn_action_covariance)
+analiza_menu.add_command(label="Proiectii",               command=btn_action_projections)
+analiza_menu.add_command(label="Orientare obiect",        command=btn_action_orientation)
+analiza_menu.add_command(label="Etichetare",              command=btn_action_etichetare)
+analiza_menu.add_command(label="SNR",                     command=lambda: print("SNR:", calculate_snr(original_matrix)))
+analiza_menu.add_command(label="SNR intre doua imagini", command=lambda: print("SNR intre original si filtrata:", calculate_snr_between(original_matrix, remove_gaussian_noise(original_matrix))))
+dropdown.add_cascade(label="Analiza", menu=analiza_menu)
+
+# --- Fourier ---
+fourier_menu = tk.Menu(dropdown, tearoff=0)
+fourier_menu.add_command(label="Transformata Fourier",          command=btn_action_fourier)
+fourier_menu.add_command(label="Transformata Fourier Inversa",  command=btn_action_inverse_fourier)
+dropdown.add_cascade(label="Fourier", menu=fourier_menu)
 
 dropdown.add_separator()
-dropdown.add_command(label="Inchide aplicatia",       command=root.destroy)
+dropdown.add_command(label="Inchide aplicatia", command=root.destroy)

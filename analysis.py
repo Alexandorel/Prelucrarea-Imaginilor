@@ -290,3 +290,48 @@ def calculate_covariance_matrix(matrix):
     mu02 = M02 / M00 - cx ** 2  # varianta pe orizontala
     mu11 = M11 / M00 - cx * cy  # covarianta
     return cx, cy, [[mu20, mu11], [mu11, mu02]]
+
+
+def calculate_snr(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+    signal_sum = 0
+    noise_sum = 0
+    for y in range(height):
+        for x in range(width):
+            r, _, _ = matrix[y][x]
+            signal = r
+            noise = abs(255 - signal)
+            signal_sum += signal
+            noise_sum += noise
+
+    n = width * height
+    signal_mean = signal_sum / n
+    noise_mean = noise_sum / n
+    if noise_mean == 0:
+        return float('inf')
+    return 10 * math.log10((signal_mean ** 2) / (noise_mean ** 2))
+
+
+def calculate_snr_between(matrix1, matrix2):
+    height = len(matrix1)
+    width = len(matrix1[0])
+    signal_sum = 0
+    noise_sum = 0
+    for y in range(height):
+        for x in range(width):
+            r1, g1, b1 = matrix1[y][x]
+            r2, g2, b2 = matrix2[y][x]
+            rgb1 = (r1 << 16) | (g1 << 8) | b1
+            rgb2 = (r2 << 16) | (g2 << 8) | b2
+            signal = abs(rgb1 - rgb2)
+            noise = abs(rgb1)
+            signal_sum += signal
+            noise_sum += noise
+
+    n = width * height
+    signal_mean = signal_sum / n
+    noise_mean = noise_sum / n
+    if noise_mean == 0:
+        return float('inf')
+    return 10 * math.log10((signal_mean ** 2) / (noise_mean ** 2))

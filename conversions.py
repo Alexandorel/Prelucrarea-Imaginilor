@@ -1,7 +1,6 @@
 import numpy as np
 
 def convert_to_grayscale(matrix):
-    # Conversie la tonuri de gri prin media aritmetica a canalelor R, G, B
     height = len(matrix)
     width = len(matrix[0])
     grayscale_matrix = []
@@ -606,6 +605,40 @@ def laplacian_filter(matrix):
             sum_val = max(0, min(255, sum_val))
             dst[y][x] = [sum_val, sum_val, sum_val]
 
+def remove_gaussian_noise(matrix):
+    height = len(matrix)
+    width = len(matrix[0])
+
+    dst = []
+    for y in range(height):
+        row = []
+        for x in range(width):
+            row.append([0, 0, 0])
+        dst.append(row)
+
+    kernel_size = 3
+    half_kernel = kernel_size // 2
+
+    for y in range(height):
+        for x in range(width):
+            sum_r = sum_g = sum_b = 0
+            # Calcularea mediei intensitatilor pixelilor din jur
+            for i in range(-half_kernel, half_kernel + 1):
+                for j in range(-half_kernel, half_kernel + 1):
+                    offset_x = min(max(x + i, 0), width - 1)
+                    offset_y = min(max(y + j, 0), height - 1)
+                    r, g, b = matrix[offset_y][offset_x]
+                    sum_r += r
+                    sum_g += g
+                    sum_b += b
+
+            avg_r = sum_r // (kernel_size * kernel_size)
+            avg_g = sum_g // (kernel_size * kernel_size)
+            avg_b = sum_b // (kernel_size * kernel_size)
+
+            dst[y][x] = [avg_r, avg_g, avg_b]
+
     return dst
+
 
     return dst
