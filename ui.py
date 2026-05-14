@@ -12,7 +12,8 @@ from conversions import (
     get_binarized_matrix, get_red_channel, get_green_channel, get_blue_channel,
     equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
     median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering, inverse_fourier_transform,
-    laplacian_filter, remove_gaussian_noise
+    laplacian_filter, remove_gaussian_noise, edge_detect, edge_enhance,
+    canny_edge_detection
 )
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
@@ -476,6 +477,30 @@ def btn_action_remove_gaussian_noise():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_edge_detect(filter_type, title):
+    if original_matrix:
+        result = edge_detect(original_matrix, filter_type)
+        show_in_new_window(result, title)
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
+def btn_action_edge_enhance(filter_type, title):
+    if original_matrix:
+        result = edge_enhance(original_matrix, filter_type)
+        show_in_new_window(result, title)
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
+def btn_action_canny():
+    if original_matrix:
+        result = canny_edge_detection(original_matrix, low_threshold=50, high_threshold=150)
+        show_in_new_window(result, "Detectie contur - Canny")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 # --- BUTOANE TOOLBAR ---
 
 btn_style = {
@@ -537,6 +562,26 @@ filtre_menu.add_command(label="Filtru accentuare",        command=btn_action_sha
 filtre_menu.add_command(label="Filtru Laplacian",         command=btn_action_laplacian_filter)
 filtre_menu.add_command(label="Floyd-Steinberg",          command=btn_action_floyd_steinberg)
 filtre_menu.add_command(label="Eliminare zgomot gaussian", command=btn_action_remove_gaussian_noise)
+
+# --- Detectie contur (submeniu in Filtre) ---
+contur_menu = tk.Menu(filtre_menu, tearoff=0)
+contur_menu.add_command(label="Vertical simplu",   command=lambda: btn_action_edge_detect(1, "Detectie contur - Vertical simplu"))
+contur_menu.add_command(label="Horizontal simplu", command=lambda: btn_action_edge_detect(2, "Detectie contur - Horizontal simplu"))
+contur_menu.add_command(label="Sobel vertical",    command=lambda: btn_action_edge_detect(3, "Detectie contur - Sobel vertical"))
+contur_menu.add_command(label="Sobel horizontal",  command=lambda: btn_action_edge_detect(4, "Detectie contur - Sobel horizontal"))
+contur_menu.add_command(label="Scharr vertical",   command=lambda: btn_action_edge_detect(5, "Detectie contur - Scharr vertical"))
+contur_menu.add_command(label="Scharr horizontal", command=lambda: btn_action_edge_detect(6, "Detectie contur - Scharr horizontal"))
+contur_menu.add_separator()
+contur_menu.add_command(label="Canny",             command=btn_action_canny)
+filtre_menu.add_cascade(label="Detectie contur", menu=contur_menu)
+
+# --- Accentuare contur (submeniu in Filtre) ---
+accentuare_menu = tk.Menu(filtre_menu, tearoff=0)
+accentuare_menu.add_command(label="Slab",     command=lambda: btn_action_edge_enhance(1, "Accentuare contur - Slab"))
+accentuare_menu.add_command(label="Puternic", command=lambda: btn_action_edge_enhance(2, "Accentuare contur - Puternic"))
+accentuare_menu.add_command(label="Excesiv",  command=lambda: btn_action_edge_enhance(3, "Accentuare contur - Excesiv"))
+filtre_menu.add_cascade(label="Accentuare contur", menu=accentuare_menu)
+
 dropdown.add_cascade(label="Filtre", menu=filtre_menu)
 
 # --- Analiza ---

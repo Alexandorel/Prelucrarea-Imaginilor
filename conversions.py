@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 def convert_to_grayscale(matrix):
@@ -642,3 +643,222 @@ def remove_gaussian_noise(matrix):
 
 
     return dst
+
+
+def edge_detect(matrix, filter_type):
+    # Detectie de contur prin convolutie 
+    # filter_type:
+    #   1 = Vertical simplu      2 = Horizontal simplu
+    #   3 = Sobel vertical       4 = Sobel horizontal
+    #   5 = Scharr vertical      6 = Scharr horizontal
+    FILTER_VERTICAL   = [[ 1, 0, -1], [ 1, 0, -1], [ 1, 0, -1]]
+    FILTER_HORIZONTAL = [[ 1, 1,  1], [ 0, 0,  0], [-1,-1, -1]]
+    FILTER_SOBEL_V    = [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]
+    FILTER_SOBEL_H    = [[ 1, 2,  1], [ 0, 0,  0], [-1,-2, -1]]
+    FILTER_SCHARR_V   = [[ 3, 0, -3], [10, 0,-10], [ 3, 0, -3]]
+    FILTER_SCHARR_H   = [[ 3,10,  3], [ 0, 0,  0], [-3,-10,-3]]
+
+    filters = {
+        1: FILTER_VERTICAL,   2: FILTER_HORIZONTAL,
+        3: FILTER_SOBEL_V,    4: FILTER_SOBEL_H,
+        5: FILTER_SCHARR_V,   6: FILTER_SCHARR_H,
+    }
+    kernel = filters[filter_type]
+
+    height = len(matrix)
+    width = len(matrix[0])
+
+    dst = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            sum_r = sum_g = sum_b = 0.0
+            for ky in range(-1, 2):
+                for kx in range(-1, 2):
+                    r, g, b = matrix[y + ky][x + kx]
+                    coef = kernel[ky + 1][kx + 1]
+                    sum_r += coef * r
+                    sum_g += coef * g
+                    sum_b += coef * b
+
+            total = sum_r + sum_g + sum_b
+            val = min(255, abs(int(total)))
+            dst[y][x] = [val, val, val]
+
+    return dst
+
+
+def edge_enhance(matrix, filter_type):
+    #   1 = Slab (4 vecini directi)
+    #   2 = Puternic (8 vecini)
+    #   3 = Excesiv (ponderi mixte)
+    FILTER_SLAB     = [[ 0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]
+    FILTER_PUTERNIC = [[-1, -1, -1], [-1,  9, -1], [-1, -1, -1]]
+    FILTER_EXCESIV  = [[ 1, -2,  1], [-2,  5, -2], [ 1, -2,  1]]
+
+    filters = {
+        1: FILTER_SLAB,
+        2: FILTER_PUTERNIC,
+        3: FILTER_EXCESIV,
+    }
+    kernel = filters[filter_type]
+
+    height = len(matrix)
+    width = len(matrix[0])
+
+    dst = [[list(matrix[y][x]) for x in range(width)] for y in range(height)]
+
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            sum_r = sum_g = sum_b = 0.0
+            for ky in range(-1, 2):
+                for kx in range(-1, 2):
+                    r, g, b = matrix[y + ky][x + kx]
+                    coef = kernel[ky + 1][kx + 1]
+                    sum_r += coef * r
+                    sum_g += coef * g
+                    sum_b += coef * b
+
+            new_r = max(0, min(255, int(sum_r)))
+            new_g = max(0, min(255, int(sum_g)))
+            new_b = max(0, min(255, int(sum_b)))
+            dst[y][x] = [new_r, new_g, new_b]
+
+    return dst
+
+
+def _canny_grayscale(matrix):
+    # Pas 1: conversie la grayscale (returneaza matrice 2D cu valori 0-255)
+    height = len(matrix)
+    width = len(matrix[0])
+    gray = [[0] * width for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            r, g, b = matrix[y][x]
+            gray[y][x] = (r + g + b) // 3
+    return gray
+
+
+def _canny_gaussian_blur(gray):
+    # Pas 2: blur Gaussian 5x5 (suma kernel = 273)
+    kernel = [
+        [1,  4,  7,  4, 1],
+        [4, 16, 26, 16, 4],
+        [7, 26, 41, 26, 7],
+        [4, 16, 26, 16, 4],
+        [1,  4,  7,  4, 1]
+    ]
+    kernel_sum = 273.0
+    height = len(gray)
+    width = len(gray[0])
+    blurred = [[0] * width for _ in range(height)]
+    for y in range(2, height - 2):
+        for x in range(2, width - 2):
+            s = 0
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    s += gray[y + dy][x + dx] * kernel[dy + 2][dx + 2]
+            blurred[y][x] = int(s / kernel_sum)
+    return blurred
+
+
+def _canny_gradient(blurred):
+    # Pas 3: gradient Sobel -> magnitudine + directie (radiani)
+    SOBEL_X = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
+    SOBEL_Y = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
+    height = len(blurred)
+    width = len(blurred[0])
+    magnitude = [[0.0] * width for _ in range(height)]
+    direction = [[0.0] * width for _ in range(height)]
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            gx = 0
+            gy = 0
+            for ky in range(-1, 2):
+                for kx in range(-1, 2):
+                    pixel = blurred[y + ky][x + kx]
+                    gx += pixel * SOBEL_X[ky + 1][kx + 1]
+                    gy += pixel * SOBEL_Y[ky + 1][kx + 1]
+            magnitude[y][x] = math.sqrt(gx * gx + gy * gy)
+            direction[y][x] = math.atan2(gy, gx)
+    return magnitude, direction
+
+
+def _canny_non_max_suppression(magnitude, direction):
+    # Pas 4: pastreaza doar maximele locale in directia gradientului
+    height = len(magnitude)
+    width = len(magnitude[0])
+    thinned = [[0.0] * width for _ in range(height)]
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            mag = magnitude[y][x]
+            angle = math.degrees(direction[y][x]) % 180
+
+            # Selectam cei 2 vecini de comparat in functie de unghiul gradientului
+            if (0 <= angle < 22.5) or (157.5 <= angle < 180):
+                # Orizontal: vecinii din stanga si dreapta
+                n1 = magnitude[y][x - 1]
+                n2 = magnitude[y][x + 1]
+            elif 22.5 <= angle < 67.5:
+                # Diagonala /: vecinii sus-dreapta si jos-stanga
+                n1 = magnitude[y - 1][x + 1]
+                n2 = magnitude[y + 1][x - 1]
+            elif 67.5 <= angle < 112.5:
+                # Vertical: vecinii de sus si de jos
+                n1 = magnitude[y - 1][x]
+                n2 = magnitude[y + 1][x]
+            else:
+                # Diagonala \: vecinii sus-stanga si jos-dreapta
+                n1 = magnitude[y - 1][x - 1]
+                n2 = magnitude[y + 1][x + 1]
+
+            # Pastram doar daca pixelul curent e maxim local pe directia gradientului
+            if mag >= n1 and mag >= n2:
+                thinned[y][x] = mag
+            else:
+                thinned[y][x] = 0
+    return thinned
+
+
+def _canny_hysteresis(thinned, low_threshold, high_threshold):
+    # Pas 5: clasifica pixelii folosind cele 2 praguri si conectivitatea 8-vecini
+    height = len(thinned)
+    width = len(thinned[0])
+    edges = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            mag = thinned[y][x]
+            if mag >= high_threshold:
+                # Contur sigur
+                edges[y][x] = [255, 255, 255]
+            elif mag < low_threshold:
+                # Zgomot
+                edges[y][x] = [0, 0, 0]
+            else:
+                # Contur slab: pastrat doar daca are un vecin cu magnitudine > prag superior
+                connected = False
+                for dy in range(-1, 2):
+                    for dx in range(-1, 2):
+                        if dy == 0 and dx == 0:
+                            continue
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < height and 0 <= nx < width:
+                            if thinned[ny][nx] >= high_threshold:
+                                connected = True
+                                break
+                    if connected:
+                        break
+                edges[y][x] = [255, 255, 255] if connected else [0, 0, 0]
+    return edges
+
+
+def canny_edge_detection(matrix, low_threshold=50, high_threshold=150):
+    # Algoritmul Canny in 5 pasi:
+    # 1) Grayscale -> 2) Blur Gaussian -> 3) Gradient Sobel
+    # 4) Non-Maximum Suppression -> 5) Hysteresis Thresholding
+    gray = _canny_grayscale(matrix)
+    blurred = _canny_gaussian_blur(gray)
+    magnitude, direction = _canny_gradient(blurred)
+    thinned = _canny_non_max_suppression(magnitude, direction)
+    edges = _canny_hysteresis(thinned, low_threshold, high_threshold)
+    return edges
