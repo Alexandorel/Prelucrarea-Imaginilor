@@ -28,6 +28,10 @@ dilate_frame = None
 dilate_entry = None
 erode_frame = None
 erode_entry = None
+edge_iter_frame = None
+edge_iter_spin = None
+last_edge_filter_type = None
+last_edge_title = None
 
 # --- CONFIGURARE FEREASTRA ---
 root = tk.Tk()
@@ -477,12 +481,43 @@ def btn_action_remove_gaussian_noise():
         print("Eroare: Incarca o imagine mai intai!")
 
 
-def btn_action_edge_detect(filter_type, title):
-    if original_matrix:
-        result = edge_detect(original_matrix, filter_type)
-        show_in_new_window(result, title)
-    else:
+def apply_edge_detect_n_times():
+    if not original_matrix:
         print("Eroare: Incarca o imagine mai intai!")
+        return
+    if last_edge_filter_type is None:
+        print("Selecteaza intai un filtru din Filtre > Detectie contur")
+        return
+    try:
+        n = int(edge_iter_spin.get())
+    except ValueError:
+        print("Introdu un numar valid (intreg)")
+        return
+    if n < 1:
+        print("Numarul de iteratii trebuie sa fie >= 1")
+        return
+    result = edge_detect(original_matrix, last_edge_filter_type, iteratii=n)
+    show_in_new_window(result, f"{last_edge_title} (x{n})")
+
+
+def btn_action_edge_detect(filter_type, title):
+    global edge_iter_frame, edge_iter_spin, last_edge_filter_type, last_edge_title
+    if not original_matrix:
+        print("Eroare: Incarca o imagine mai intai!")
+        return
+    if edge_iter_frame is None:
+        edge_iter_frame = tk.Frame(toolbar, bg='#f0f0f0')
+        edge_iter_frame.pack(side="left", padx=4, pady=4)
+        tk.Label(edge_iter_frame, text="Iteratii contur:", bg='#f0f0f0',
+                 font=("Arial", 10)).pack(side="left", padx=(4, 2))
+        edge_iter_spin = tk.Spinbox(edge_iter_frame, from_=1, to=10, width=3,
+                                    font=("Arial", 10))
+        edge_iter_spin.pack(side="left", padx=2)
+        tk.Button(edge_iter_frame, text="Aplica",
+                  command=apply_edge_detect_n_times, **btn_style).pack(side="left", padx=2)
+    last_edge_filter_type = filter_type
+    last_edge_title = title
+    apply_edge_detect_n_times()
 
 
 def btn_action_edge_enhance(filter_type, title):

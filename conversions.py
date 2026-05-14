@@ -645,12 +645,13 @@ def remove_gaussian_noise(matrix):
     return dst
 
 
-def edge_detect(matrix, filter_type):
-    # Detectie de contur prin convolutie 
+def edge_detect(matrix, filter_type, iteratii=1):
+    # Detectie de contur prin convolutie
     # filter_type:
     #   1 = Vertical simplu      2 = Horizontal simplu
     #   3 = Sobel vertical       4 = Sobel horizontal
     #   5 = Scharr vertical      6 = Scharr horizontal
+    # iteratii: de cate ori se aplica filtrul (output-ul devine input pentru iteratia urmatoare)
     FILTER_VERTICAL   = [[ 1, 0, -1], [ 1, 0, -1], [ 1, 0, -1]]
     FILTER_HORIZONTAL = [[ 1, 1,  1], [ 0, 0,  0], [-1,-1, -1]]
     FILTER_SOBEL_V    = [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]
@@ -668,24 +669,26 @@ def edge_detect(matrix, filter_type):
     height = len(matrix)
     width = len(matrix[0])
 
-    dst = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+    src = matrix
+    for _ in range(iteratii):
+        dst = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+        for y in range(1, height - 1):
+            for x in range(1, width - 1):
+                sum_r = sum_g = sum_b = 0.0
+                for ky in range(-1, 2):
+                    for kx in range(-1, 2):
+                        r, g, b = src[y + ky][x + kx]
+                        coef = kernel[ky + 1][kx + 1]
+                        sum_r += coef * r
+                        sum_g += coef * g
+                        sum_b += coef * b
 
-    for y in range(1, height - 1):
-        for x in range(1, width - 1):
-            sum_r = sum_g = sum_b = 0.0
-            for ky in range(-1, 2):
-                for kx in range(-1, 2):
-                    r, g, b = matrix[y + ky][x + kx]
-                    coef = kernel[ky + 1][kx + 1]
-                    sum_r += coef * r
-                    sum_g += coef * g
-                    sum_b += coef * b
+                total = sum_r + sum_g + sum_b
+                val = min(255, abs(int(total)))
+                dst[y][x] = [val, val, val]
+        src = dst
 
-            total = sum_r + sum_g + sum_b
-            val = min(255, abs(int(total)))
-            dst[y][x] = [val, val, val]
-
-    return dst
+    return src
 
 
 def edge_enhance(matrix, filter_type):
