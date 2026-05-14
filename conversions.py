@@ -647,11 +647,6 @@ def remove_gaussian_noise(matrix):
 
 def edge_detect(matrix, filter_type, iteratii=1):
     # Detectie de contur prin convolutie
-    # filter_type:
-    #   1 = Vertical simplu      2 = Horizontal simplu
-    #   3 = Sobel vertical       4 = Sobel horizontal
-    #   5 = Scharr vertical      6 = Scharr horizontal
-    # iteratii: de cate ori se aplica filtrul (output-ul devine input pentru iteratia urmatoare)
     FILTER_VERTICAL   = [[ 1, 0, -1], [ 1, 0, -1], [ 1, 0, -1]]
     FILTER_HORIZONTAL = [[ 1, 1,  1], [ 0, 0,  0], [-1,-1, -1]]
     FILTER_SOBEL_V    = [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]
@@ -692,9 +687,6 @@ def edge_detect(matrix, filter_type, iteratii=1):
 
 
 def edge_enhance(matrix, filter_type):
-    #   1 = Slab (4 vecini directi)
-    #   2 = Puternic (8 vecini)
-    #   3 = Excesiv (ponderi mixte)
     FILTER_SLAB     = [[ 0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]
     FILTER_PUTERNIC = [[-1, -1, -1], [-1,  9, -1], [-1, -1, -1]]
     FILTER_EXCESIV  = [[ 1, -2,  1], [-2,  5, -2], [ 1, -2,  1]]
@@ -731,7 +723,7 @@ def edge_enhance(matrix, filter_type):
 
 
 def _canny_grayscale(matrix):
-    # Pas 1: conversie la grayscale (returneaza matrice 2D cu valori 0-255)
+    # Conversia la grayscale, usurand munca
     height = len(matrix)
     width = len(matrix[0])
     gray = [[0] * width for _ in range(height)]
@@ -743,7 +735,7 @@ def _canny_grayscale(matrix):
 
 
 def _canny_gaussian_blur(gray):
-    # Pas 2: blur Gaussian 5x5 (suma kernel = 273)
+    # Aplicarea blur-ului
     kernel = [
         [1,  4,  7,  4, 1],
         [4, 16, 26, 16, 4],
@@ -766,7 +758,7 @@ def _canny_gaussian_blur(gray):
 
 
 def _canny_gradient(blurred):
-    # Pas 3: gradient Sobel -> magnitudine + directie (radiani)
+    # Calculul gradientului : magnitudine si directie folosind Sobel
     SOBEL_X = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
     SOBEL_Y = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
     height = len(blurred)
@@ -788,7 +780,7 @@ def _canny_gradient(blurred):
 
 
 def _canny_non_max_suppression(magnitude, direction):
-    # Pas 4: pastreaza doar maximele locale in directia gradientului
+    # Non-Maximum Suppresion: subtierea conturului
     height = len(magnitude)
     width = len(magnitude[0])
     thinned = [[0.0] * width for _ in range(height)]
@@ -797,7 +789,6 @@ def _canny_non_max_suppression(magnitude, direction):
             mag = magnitude[y][x]
             angle = math.degrees(direction[y][x]) % 180
 
-            # Selectam cei 2 vecini de comparat in functie de unghiul gradientului
             if (0 <= angle < 22.5) or (157.5 <= angle < 180):
                 # Orizontal: vecinii din stanga si dreapta
                 n1 = magnitude[y][x - 1]
@@ -815,7 +806,7 @@ def _canny_non_max_suppression(magnitude, direction):
                 n1 = magnitude[y - 1][x - 1]
                 n2 = magnitude[y + 1][x + 1]
 
-            # Pastram doar daca pixelul curent e maxim local pe directia gradientului
+            # Pastram pixel daca e maxim local
             if mag >= n1 and mag >= n2:
                 thinned[y][x] = mag
             else:
@@ -824,15 +815,11 @@ def _canny_non_max_suppression(magnitude, direction):
 
 
 def _canny_hysteresis(thinned, low_threshold, high_threshold):
-    # Pas 5: clasifica pixelii folosind cele 2 praguri si conectivitatea 8-vecini.
-    # Pornim de la toti pixelii puternici (>= high_threshold) si propagam prin
-    # pixelii slabi (low <= mag < high) folosind un DFS iterativ. Astfel se
-    # umplu golurile de-a lungul contururilor (edge linking).
+    # Clasifica pixelii folosind 2 praguri
     height = len(thinned)
     width = len(thinned[0])
     edges = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
 
-    # Initializare: marcam toti pixelii puternici si ii punem in stiva
     stack = []
     for y in range(height):
         for x in range(width):
@@ -840,8 +827,6 @@ def _canny_hysteresis(thinned, low_threshold, high_threshold):
                 edges[y][x] = [255, 255, 255]
                 stack.append((y, x))
 
-    # Propagare: orice pixel slab adiacent (8-vecini) la unul deja confirmat
-    # devine la randul lui contur si se adauga in stiva
     while stack:
         y, x = stack.pop()
         for dy in range(-1, 2):
@@ -858,9 +843,6 @@ def _canny_hysteresis(thinned, low_threshold, high_threshold):
 
 
 def canny_edge_detection(matrix, low_threshold=50, high_threshold=150):
-    # Algoritmul Canny in 5 pasi:
-    # 1) Grayscale -> 2) Blur Gaussian -> 3) Gradient Sobel
-    # 4) Non-Maximum Suppression -> 5) Hysteresis Thresholding
     gray = _canny_grayscale(matrix)
     blurred = _canny_gaussian_blur(gray)
     magnitude, direction = _canny_gradient(blurred)
