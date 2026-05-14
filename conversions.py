@@ -824,34 +824,36 @@ def _canny_non_max_suppression(magnitude, direction):
 
 
 def _canny_hysteresis(thinned, low_threshold, high_threshold):
-    # Pas 5: clasifica pixelii folosind cele 2 praguri si conectivitatea 8-vecini
+    # Pas 5: clasifica pixelii folosind cele 2 praguri si conectivitatea 8-vecini.
+    # Pornim de la toti pixelii puternici (>= high_threshold) si propagam prin
+    # pixelii slabi (low <= mag < high) folosind un DFS iterativ. Astfel se
+    # umplu golurile de-a lungul contururilor (edge linking).
     height = len(thinned)
     width = len(thinned[0])
     edges = [[[0, 0, 0] for _ in range(width)] for _ in range(height)]
+
+    # Initializare: marcam toti pixelii puternici si ii punem in stiva
+    stack = []
     for y in range(height):
         for x in range(width):
-            mag = thinned[y][x]
-            if mag >= high_threshold:
-                # Contur sigur
+            if thinned[y][x] >= high_threshold:
                 edges[y][x] = [255, 255, 255]
-            elif mag < low_threshold:
-                # Zgomot
-                edges[y][x] = [0, 0, 0]
-            else:
-                # Contur slab: pastrat doar daca are un vecin cu magnitudine > prag superior
-                connected = False
-                for dy in range(-1, 2):
-                    for dx in range(-1, 2):
-                        if dy == 0 and dx == 0:
-                            continue
-                        ny, nx = y + dy, x + dx
-                        if 0 <= ny < height and 0 <= nx < width:
-                            if thinned[ny][nx] >= high_threshold:
-                                connected = True
-                                break
-                    if connected:
-                        break
-                edges[y][x] = [255, 255, 255] if connected else [0, 0, 0]
+                stack.append((y, x))
+
+    # Propagare: orice pixel slab adiacent (8-vecini) la unul deja confirmat
+    # devine la randul lui contur si se adauga in stiva
+    while stack:
+        y, x = stack.pop()
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                if dy == 0 and dx == 0:
+                    continue
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < height and 0 <= nx < width:
+                    if edges[ny][nx][0] == 0 and thinned[ny][nx] >= low_threshold:
+                        edges[ny][nx] = [255, 255, 255]
+                        stack.append((ny, nx))
+
     return edges
 
 

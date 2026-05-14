@@ -15,6 +15,7 @@ from conversions import (
     laplacian_filter, remove_gaussian_noise, edge_detect, edge_enhance,
     canny_edge_detection
 )
+from opencv_functions import canny_edge_detection_cv
 from analysis import (
     get_histogram_figure, calculate_moment_order1, calculate_moment_order2,
     get_projections_figure, calculate_covariance_matrix, label_objects, select_object_by_label,
@@ -536,6 +537,14 @@ def btn_action_canny():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_canny_opencv():
+    if original_matrix:
+        result = canny_edge_detection_cv(original_matrix, low_threshold=50, high_threshold=150)
+        show_in_new_window(result, "Detectie contur - Canny (OpenCV)")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 # --- BUTOANE TOOLBAR ---
 
 btn_style = {
@@ -608,6 +617,7 @@ contur_menu.add_command(label="Scharr vertical",   command=lambda: btn_action_ed
 contur_menu.add_command(label="Scharr horizontal", command=lambda: btn_action_edge_detect(6, "Detectie contur - Scharr horizontal"))
 contur_menu.add_separator()
 contur_menu.add_command(label="Canny",             command=btn_action_canny)
+contur_menu.add_command(label="Canny (OpenCV)",    command=btn_action_canny_opencv)
 filtre_menu.add_cascade(label="Detectie contur", menu=contur_menu)
 
 # --- Accentuare contur (submeniu in Filtre) ---
