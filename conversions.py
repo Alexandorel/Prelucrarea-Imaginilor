@@ -879,6 +879,29 @@ def _convolve_gray(gray, kernel):
     return dst
 
 
+def laplacian_of_gaussian(matrix, kernel_size=3, sigma=1.4):
+    height = len(matrix)
+    width = len(matrix[0])
+
+    gray = [[0] * width for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            r, g, b = matrix[y][x]
+            gray[y][x] = (r + g + b) // 3
+
+    gaussian_kernel = _build_gaussian_kernel(kernel_size, sigma)
+    smoothed = _convolve_gray(gray, gaussian_kernel)
+
+    laplace_kernel = [
+        [0.0,  1.0, 0.0],
+        [1.0, -4.0, 1.0],
+        [0.0,  1.0, 0.0],
+    ]
+    laplace = _convolve_gray(smoothed, laplace_kernel)
+
+    return [[[laplace[y][x]] * 3 for x in range(width)] for y in range(height)]
+
+
 def canny_edge_detection(matrix, low_threshold=50, high_threshold=150):
     gray = _canny_grayscale(matrix)
     blurred = _canny_gaussian_blur(gray)

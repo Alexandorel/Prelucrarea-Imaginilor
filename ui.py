@@ -13,7 +13,7 @@ from conversions import (
     equalize_histogram, dilate_image, erode_image, Fourier_transform, mean_filter,
     median_filter, minimum_filter, maximum_filter, sharpen_filter, floyd_steinberg_dithering, inverse_fourier_transform,
     laplacian_filter, remove_gaussian_noise, edge_detect, edge_enhance,
-    canny_edge_detection, canny_edge_detection_adaptive
+    canny_edge_detection, canny_edge_detection_adaptive, laplacian_of_gaussian
 )
 from opencv_functions import canny_edge_detection_cv, canny_edge_detection_adaptive_cv
 from analysis import (
@@ -561,6 +561,14 @@ def btn_action_canny_adaptive_opencv():
         print("Eroare: Incarca o imagine mai intai!")
 
 
+def btn_action_log():
+    if original_matrix:
+        result = laplacian_of_gaussian(original_matrix, kernel_size=3, sigma=1.4)
+        show_in_new_window(result, "Detectie contur - Laplacian of Gaussian")
+    else:
+        print("Eroare: Incarca o imagine mai intai!")
+
+
 # --- BUTOANE TOOLBAR ---
 
 btn_style = {
@@ -636,6 +644,8 @@ contur_menu.add_command(label="Canny",             command=btn_action_canny)
 contur_menu.add_command(label="Canny (OpenCV)",    command=btn_action_canny_opencv)
 contur_menu.add_command(label="Canny adaptiv",          command=btn_action_canny_adaptive)
 contur_menu.add_command(label="Canny adaptiv (OpenCV)", command=btn_action_canny_adaptive_opencv)
+contur_menu.add_separator()
+contur_menu.add_command(label="Laplacian of Gaussian",  command=btn_action_log)
 filtre_menu.add_cascade(label="Detectie contur", menu=contur_menu)
 
 # --- Accentuare contur (submeniu in Filtre) ---
