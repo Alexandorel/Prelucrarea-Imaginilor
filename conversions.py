@@ -842,10 +842,53 @@ def _canny_hysteresis(thinned, low_threshold, high_threshold):
     return edges
 
 
+def _build_gaussian_kernel(kernel_size, sigma):
+    half = kernel_size // 2
+    kernel = [[0.0] * kernel_size for _ in range(kernel_size)]
+    kernel_sum = 0.0
+    for i in range(-half, half + 1):
+        for j in range(-half, half + 1):
+            value = math.exp(-(i * i + j * j) / (2.0 * sigma * sigma))
+            kernel[i + half][j + half] = value
+            kernel_sum += value
+    for i in range(kernel_size):
+        for j in range(kernel_size):
+            kernel[i][j] /= kernel_sum
+    return kernel
+
+
 def canny_edge_detection(matrix, low_threshold=50, high_threshold=150):
     gray = _canny_grayscale(matrix)
     blurred = _canny_gaussian_blur(gray)
     magnitude, direction = _canny_gradient(blurred)
+    thinned = _canny_non_max_suppression(magnitude, direction)
+    edges = _canny_hysteresis(thinned, low_threshold, high_threshold)
+    return edges
+
+
+def canny_edge_detection_adaptive(matrix, sigma=0.33):
+
+    gray = _canny_grayscale(matrix)
+    blurred = _canny_gaussian_blur(gray)
+    magnitude, direction = _canny_gradient(blurred)
+
+    flat = []
+    height = len(magnitude)
+    width = len(magnitude[0])
+    for y in range(height):
+        for x in range(width):
+            if magnitude[y][x] > 0:
+                flat.append(magnitude[y][x])
+
+    if flat:
+        flat.sort()
+        median = flat[len(flat) // 2]
+    else:
+        median = 0.0
+
+    low_threshold = max(0.0, (1.0 - sigma) * median)
+    high_threshold = (1.0 + sigma) * median
+
     thinned = _canny_non_max_suppression(magnitude, direction)
     edges = _canny_hysteresis(thinned, low_threshold, high_threshold)
     return edges
