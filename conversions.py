@@ -857,6 +857,28 @@ def _build_gaussian_kernel(kernel_size, sigma):
     return kernel
 
 
+def _convolve_gray(gray, kernel):
+    height = len(gray)
+    width = len(gray[0])
+    k_size = len(kernel)
+    half = k_size // 2
+
+    dst = [[0] * width for _ in range(height)]
+    for y in range(half, height - half):
+        for x in range(half, width - half):
+            s = 0.0
+            for i in range(-half, half + 1):
+                for j in range(-half, half + 1):
+                    s += gray[y + i][x + j] * kernel[i + half][j + half]
+            val = int(round(s))
+            if val < 0:
+                val = 0
+            elif val > 255:
+                val = 255
+            dst[y][x] = val
+    return dst
+
+
 def canny_edge_detection(matrix, low_threshold=50, high_threshold=150):
     gray = _canny_grayscale(matrix)
     blurred = _canny_gaussian_blur(gray)
